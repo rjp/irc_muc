@@ -1,0 +1,9 @@
+A simple single user IRC to Jabber MUC gateway.
+
+Input: YAML file configuring all the relevant entities
+
+username        bot@jabber.pi.st
+password        password
+conference      moo@conference.jabber.pi.st
+irc port        6692
+irc room        #moo
