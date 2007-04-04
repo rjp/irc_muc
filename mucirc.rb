@@ -82,7 +82,10 @@ Thread.new {
                         receiver = args.shift
                         text = args.join(' ').gsub(/^:/, '').gsub(%r{^\001ACTION },'/me ').gsub(%r{\001$}, '')
                         puts "send [#{text}] to channel #{receiver}"
-                        m.say(text)
+                        case receiver
+                            when /^#/: m.say(text)
+                            else m.say(text, receiver)
+                        end
                     when 'TOPIC':
                         receiver = args.shift
                         text = args.join(' ').gsub(/^:/, '')
@@ -129,6 +132,22 @@ m.on_leave { |time,nick|
             $global_poo.write(":#{nick}!~#{nick}@localhost PART #{$global_chan} :#{nick}\n")
         end
     end
+}
+
+m.on_private_message { |time,nick,text|
+  if nick == jnick then
+      puts "I should ignore [#{jnick}]"
+      time = Time.now # FUDGE
+  end
+  # Avoid reacting on messaged delivered as room history
+  unless time 
+    unless $global_poo.nil?
+	    irctext = text.gsub(%r{^/me (.*)$}) { "\001ACTION #{$1}\001" }
+# :old_anne!anne_thorniley@hotmail.com PRIVMSG rjp :ok
+	    puts (":#{nick}!~#{nick}@localhost PRIVMSG #{jnick} :#{irctext} [[#{text}]]")
+	    $global_poo.write(":#{nick}!~#{nick}@frottage.org PRIVMSG #{jnick} :#{irctext}\n")
+    end
+  end
 }
 
 m.on_message { |time,nick,text|
