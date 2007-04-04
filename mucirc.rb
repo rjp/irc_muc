@@ -56,9 +56,9 @@ Thread.new {
                             s.write(":jirc 324 #{nick} #bots +\n")
                         end
                     when 'WHO':
-                        s.write(":jirc 352 #{nick} #bots ~rjp localhost jirc rjp H :0 fish\n")
-                        s.write(":jirc 352 #{nick} #bots ~badger localhost jirc badger H :0 fish\n")
-                        s.write(":jirc 352 #{nick} #bots ~shoe localhost jirc shoe H :0 fish\n")
+                        m.roster.keys.each { |who|
+                            s.write(":jirc 352 #{who} #bots ~who localhost jirc who H :0\n")
+                        }
                         s.write(":jirc 315 #{nick} #bots :END OF WHO LIST\n")
 
 #                   join #bots
@@ -67,6 +67,8 @@ Thread.new {
 #                   :irc.pi.st 366 badger #bots :End of NAMES list
                     when 'JOIN':
                         chan = args[0]
+                        jchan = chan.gsub(/^#/,'') << '@conference.jabber.pi.st/' << nick
+                        puts "in future, I will join jabber://#{jchan}"
                         puts("332 #{nick} #{chan} :fish\n")
                         s.write(":jirc 332 #{nick} #bots :#{$global_subject}\n")
                         puts("353 #{chan} :#{nick} rjp\n")
@@ -88,7 +90,7 @@ Thread.new {
 		    end
 		    print(s, " is gone\n")
 		    s.close
-        catch
+        rescue
             puts "bork"
         end
 	  end
@@ -104,16 +106,24 @@ m.on_join { |time,nick|
   print_line time, "#{nick} has joined!"
   puts "Users: " + m.roster.keys.join(', ')
   $global_j_users = m.roster.keys.join(' ')
-  unless time
+    unless time
     puts "report new person #{nick} in the room"
-  end
+    puts "#{nick}!~#{nick}@localhost JOIN :#bots"
+        unless $global_poo.nil? 
+            $global_poo.write(":#{nick}!~#{nick}@localhost JOIN :#bots\n")
+        end
+    end
 }
 m.on_leave { |time,nick|
   print_line time, "#{nick} has left!"
   $global_j_users = m.roster.keys.join(' ')
-  unless time
-    puts "report that someone #{nick} has left the room"
-  end
+    unless time
+        unless $global_poo.nil? 
+            puts "report that someone #{nick} has left the room"
+            puts "#{nick}!~#{nick}@localhost PART #bots :#{nick}"
+            $global_poo.write(":#{nick}!~#{nick}@localhost PART #bots :#{nick}\n")
+        end
+    end
 }
 
 m.on_message { |time,nick,text|
