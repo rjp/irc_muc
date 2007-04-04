@@ -88,10 +88,12 @@ Thread.new {
                         puts $_.chomp
                 end
 		    end
+            $global_poo = nil
 		    print(s, " is gone\n")
 		    s.close
         rescue
-            puts "bork"
+            $global_poo = nil
+            puts "bork, restarting accept"
         end
 	  end
     end
@@ -131,33 +133,15 @@ m.on_message { |time,nick,text|
 
   if nick == jnick then
       puts "I should ignore [#{jnick}]"
-      time = Time.now
+      time = Time.now # FUDGE
   end
 
   # Avoid reacting on messaged delivered as room history
   unless time 
-    irctext = text.gsub(%r{^/me (.*)$}) { "\001ACTION #{$1}\001" }
-    puts (":#{nick}!~#{nick}@localhost PRIVMSG #bots :#{irctext} [[#{text}]]")
-    $global_poo.write(":#{nick}!~#{nick}@frottage.org PRIVMSG #bots :#{irctext}\n")
-    # Bot: invite astro@spaceboyz.net
-    if text.strip =~ /^(.+?): invite (.+)$/
-      jid = $2
-      if $1.downcase == m.jid.resource.downcase
-        m.invite(jid => "Inviting you on behalf of #{nick}")
-        m.say("Inviting #{jid}...")
-      end
-    # Bot: subject This is room is powered by XMPP4R
-    elsif text.strip =~ /^(.+?): subject (.+)$/
-      if $1.downcase == m.jid.resource.downcase
-        m.subject = $2
-      end
-    # Bot: exit please
-    elsif text.strip =~ /^(.+?): exit please$/
-      if $1.downcase == m.jid.resource.downcase
-        puts "exiting"
-        m.exit "Exiting on behalf of #{nick}"
-        mainthread.wakeup
-      end
+    unless $global_poo.nil?
+	    irctext = text.gsub(%r{^/me (.*)$}) { "\001ACTION #{$1}\001" }
+	    puts (":#{nick}!~#{nick}@localhost PRIVMSG #bots :#{irctext} [[#{text}]]")
+	    $global_poo.write(":#{nick}!~#{nick}@frottage.org PRIVMSG #bots :#{irctext}\n")
     end
   end
 }
