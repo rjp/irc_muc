@@ -7,6 +7,7 @@ $global_poo = nil
 $global_j_users = ''
 $global_subject = '(no topic set yet)'
 $global_nick = nil
+$global_chan = nil
 
 if ARGV.size != 5
   puts "Usage: #{$0} <jid> <password> <room@conference/nick> <port> <room>"
@@ -52,14 +53,14 @@ Thread.new {
                     when 'NICK': 
                         i_nick = args[0]
                     when 'MODE':
-                        if args[0] == '#bots' then
-                            s.write(":jirc 324 #{nick} #bots +\n")
+                        if args[0] == $global_chan then
+                            s.write(":jirc 324 #{nick} #{$global_chan} +\n")
                         end
                     when 'WHO':
                         m.roster.keys.each { |who|
-                            s.write(":jirc 352 #{who} #bots ~who localhost jirc who H :0\n")
+                            s.write(":jirc 352 #{who} #{$global_chan} ~who localhost jirc who H :0\n")
                         }
-                        s.write(":jirc 315 #{nick} #bots :END OF WHO LIST\n")
+                        s.write(":jirc 315 #{nick} #{$global_chan} :END OF WHO LIST\n")
 
 #                   join #bots
 #                   :badger!~badger@frottage.org JOIN :#bots
@@ -67,10 +68,12 @@ Thread.new {
 #                   :irc.pi.st 366 badger #bots :End of NAMES list
                     when 'JOIN':
                         chan = args[0]
+# when you join a channel, that's the only one you're in.  kinda.
+                        $global_chan = chan 
                         jchan = chan.gsub(/^#/,'') << '@conference.jabber.pi.st/' << nick
                         puts "in future, I will join jabber://#{jchan}"
                         puts("332 #{nick} #{chan} :fish\n")
-                        s.write(":jirc 332 #{nick} #bots :#{$global_subject}\n")
+                        s.write(":jirc 332 #{nick} #{chan} :#{$global_subject}\n")
                         puts("353 #{chan} :#{nick} rjp\n")
                         s.write(":jirc 353 #{nick} = #{chan} :#{nick} #{$global_j_users}\n")
                         puts("366 #{chan} :END OF NAMES\n")
@@ -110,9 +113,9 @@ m.on_join { |time,nick|
   $global_j_users = m.roster.keys.join(' ')
     unless time
     puts "report new person #{nick} in the room"
-    puts "#{nick}!~#{nick}@localhost JOIN :#bots"
+    puts "#{nick}!~#{nick}@localhost JOIN :#{$global_chan}"
         unless $global_poo.nil? 
-            $global_poo.write(":#{nick}!~#{nick}@localhost JOIN :#bots\n")
+            $global_poo.write(":#{nick}!~#{nick}@localhost JOIN :#{$global_chan}\n")
         end
     end
 }
@@ -122,8 +125,8 @@ m.on_leave { |time,nick|
     unless time
         unless $global_poo.nil? 
             puts "report that someone #{nick} has left the room"
-            puts "#{nick}!~#{nick}@localhost PART #bots :#{nick}"
-            $global_poo.write(":#{nick}!~#{nick}@localhost PART #bots :#{nick}\n")
+            puts "#{nick}!~#{nick}@localhost PART #{$global_chan} :#{nick}"
+            $global_poo.write(":#{nick}!~#{nick}@localhost PART #{$global_chan} :#{nick}\n")
         end
     end
 }
@@ -140,8 +143,8 @@ m.on_message { |time,nick,text|
   unless time 
     unless $global_poo.nil?
 	    irctext = text.gsub(%r{^/me (.*)$}) { "\001ACTION #{$1}\001" }
-	    puts (":#{nick}!~#{nick}@localhost PRIVMSG #bots :#{irctext} [[#{text}]]")
-	    $global_poo.write(":#{nick}!~#{nick}@frottage.org PRIVMSG #bots :#{irctext}\n")
+	    puts (":#{nick}!~#{nick}@localhost PRIVMSG #{$global_chan} :#{irctext} [[#{text}]]")
+	    $global_poo.write(":#{nick}!~#{nick}@frottage.org PRIVMSG #{$global_chan} :#{irctext}\n")
     end
   end
 }
@@ -154,7 +157,7 @@ m.on_subject { |time,nick,subject|
   $global_subject = subject
   unless time
 	  unless $global_poo.nil? then
-	        $global_poo.write(":jirc 332 #{nick} #bots :#{$global_subject}\n")
+	        $global_poo.write(":jirc 332 #{nick} #{$global_chan} :#{$global_subject}\n")
 	  end
   end
 }
