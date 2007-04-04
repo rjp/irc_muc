@@ -75,7 +75,7 @@ Thread.new {
                         s.write(":jirc 366 #{nick} #{chan} :END OF NAMES\n")
                     when 'PRIVMSG':
                         receiver = args.shift
-                        text = args.join(' ').gsub(/^:/, '')
+                        text = args.join(' ').gsub(/^:/, '').gsub(%r{^\001ACTION },'/me ').gsub(%r{\001$}, '')
                         puts "send [#{text}] to channel #{receiver}"
                         m.say(text)
                     when 'TOPIC':
@@ -126,8 +126,9 @@ m.on_message { |time,nick,text|
 
   # Avoid reacting on messaged delivered as room history
   unless time 
-    puts (":#{nick}!~#{nick}@localhost PRIVMSG #bots :#{text}")
-    $global_poo.write(":#{nick}!~#{nick}@frottage.org PRIVMSG #bots :#{text}\n")
+    irctext = text.gsub(%r{^/me (.*)$}) { "\001ACTION #{$1}\001" }
+    puts (":#{nick}!~#{nick}@localhost PRIVMSG #bots :#{irctext} [[#{text}]]")
+    $global_poo.write(":#{nick}!~#{nick}@frottage.org PRIVMSG #bots :#{irctext}\n")
     # Bot: invite astro@spaceboyz.net
     if text.strip =~ /^(.+?): invite (.+)$/
       jid = $2
@@ -157,8 +158,10 @@ m.on_subject { |time,nick,subject|
   print_line time, "*** (#{nick}) #{subject}"
   puts "set the topic to [#{subject}] by #{nick}"
   $global_subject = subject
-  unless $global_poo.nil? then
-        $global_poo.write(":jirc 332 #{jnick} #bots :#{$global_subject}\n")
+  unless time
+	  unless $global_poo.nil? then
+	        $global_poo.write(":jirc 332 #{nick} #bots :#{$global_subject}\n")
+	  end
   end
 }
 
