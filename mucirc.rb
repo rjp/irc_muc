@@ -2,12 +2,14 @@
 $:.unshift '../../../../../lib/'
 require 'xmpp4r'
 require 'xmpp4r/muc/helper/simplemucclient'
+require 'xmpp4r/presence'
 
 $global_poo = nil
 $global_j_users = ''
 $global_subject = '(no topic set yet)'
 $global_nick = nil
 $global_chan = nil
+$global_away = {}
 
 if ARGV.size != 5
   puts "Usage: #{$0} <jid> <password> <room@conference/nick> <port> <room>"
@@ -44,10 +46,26 @@ Thread.new {
         print(s, " is accepted (#{$global_poo})\n")
         begin
 		    while s.gets do
-                puts $_.chomp
-		        command, *args = $_.split(' ')
+                $_.chomp
+		        command, *args = $_.gsub(/\r/, '').split(' ')
                 puts "c=#{command} a=#{args.inspect}"
                 case command 
+                    when 'AWAY':
+                        away = args[0]
+                        pres = Jabber::Presence.new
+                        pres.to = ARGV[2].gsub(%r{/.*$}, '')
+                        pres.from = ARGV[0]
+                        pres.type = :available
+                        if away == ':' then
+                            pres.show = nil
+                            pres.status = nil
+                            s.write(":jirc 305 #{nick} :You are no longer away\n")
+                        else
+                            pres.show = :away
+                            pres.status = away
+                            s.write(":jirc 306 #{nick} :You are away\n")
+                        end
+                        m.send(pres)
                     when 'USER': 
                         s.write("375 #{nick} :- MOTD\n"); s.write("376 #{nick} :- END OF MOTD\n");
                     when 'NICK': 
@@ -72,19 +90,20 @@ Thread.new {
                         $global_chan = chan 
                         jchan = chan.gsub(/^#/,'') << '@conference.jabber.pi.st/' << nick
                         puts "in future, I will join jabber://#{jchan}"
-                        puts("332 #{nick} #{chan} :fish\n")
                         s.write(":jirc 332 #{nick} #{chan} :#{$global_subject}\n")
-                        puts("353 #{chan} :#{nick} rjp\n")
                         s.write(":jirc 353 #{nick} = #{chan} :#{nick} #{$global_j_users}\n")
-                        puts("366 #{chan} :END OF NAMES\n")
                         s.write(":jirc 366 #{nick} #{chan} :END OF NAMES\n")
                     when 'PRIVMSG':
                         receiver = args.shift
+                        p m.roster[receiver]
                         text = args.join(' ').gsub(/^:/, '').gsub(%r{^\001ACTION },'/me ').gsub(%r{\001$}, '')
                         puts "send [#{text}] to channel #{receiver}"
                         case receiver
                             when /^#/: m.say(text)
                             else m.say(text, receiver)
+                                unless m.roster[receiver].show.nil? then
+                                    s.write(":jirc 301 #{nick} #{receiver} :#{m.roster[receiver].status}\n")
+                                end
                         end
                     when 'TOPIC':
                         receiver = args.shift
@@ -97,9 +116,9 @@ Thread.new {
             $global_poo = nil
 		    print(s, " is gone\n")
 		    s.close
-        rescue
+        rescue => bork
             $global_poo = nil
-            puts "bork, restarting accept"
+            puts "#{bork}, restarting accept"
         end
 	  end
     end
@@ -109,13 +128,27 @@ Thread.new {
 mainthread = Thread.current
 
 # SimpleMUCClient callback-blocks
+m.add_presence_callback { |x|
+    puts "#{x.type||'NIL'} #{x.show} #{x.status} #{x.from} #{x.to}"
+    unless $global_poo.nil? then
+        nick = x.from.to_s.gsub(%r{^.*/}, '')
+
+	    if x.show.nil? then # available
+	        puts "UNAWAY from #{x.from} -> #{nick}"
+            $global_poo.write(":jirc 305 #{nick} :You are no longer away\n")
+            $global_away[nick] = nil
+	    else
+	        puts "AWAY from #{x.from} -> #{nick}"
+            $global_poo.write(":jirc 306 #{nick} :You are away\n")
+            $global_away[nick] = x.status
+	    end
+    end
+}
 
 m.on_join { |time,nick|
   print_line time, "#{nick} has joined!"
-  puts "Users: " + m.roster.keys.join(', ')
   $global_j_users = m.roster.keys.join(' ')
     unless time
-    puts "report new person #{nick} in the room"
     puts "#{nick}!~#{nick}@localhost JOIN :#{$global_chan}"
         unless $global_poo.nil? 
             $global_poo.write(":#{nick}!~#{nick}@localhost JOIN :#{$global_chan}\n")
@@ -127,7 +160,6 @@ m.on_leave { |time,nick|
   $global_j_users = m.roster.keys.join(' ')
     unless time
         unless $global_poo.nil? 
-            puts "report that someone #{nick} has left the room"
             puts "#{nick}!~#{nick}@localhost PART #{$global_chan} :#{nick}"
             $global_poo.write(":#{nick}!~#{nick}@localhost PART #{$global_chan} :#{nick}\n")
         end
@@ -136,15 +168,12 @@ m.on_leave { |time,nick|
 
 m.on_private_message { |time,nick,text|
   if nick == jnick then
-      puts "I should ignore [#{jnick}]"
       time = Time.now # FUDGE
   end
   # Avoid reacting on messaged delivered as room history
   unless time 
     unless $global_poo.nil?
 	    irctext = text.gsub(%r{^/me (.*)$}) { "\001ACTION #{$1}\001" }
-# :old_anne!anne_thorniley@hotmail.com PRIVMSG rjp :ok
-	    puts (":#{nick}!~#{nick}@localhost PRIVMSG #{jnick} :#{irctext} [[#{text}]]")
 	    $global_poo.write(":#{nick}!~#{nick}@frottage.org PRIVMSG #{jnick} :#{irctext}\n")
     end
   end
@@ -154,7 +183,6 @@ m.on_message { |time,nick,text|
   print_line time, "<#{nick}> #{text}"
 
   if nick == jnick then
-      puts "I should ignore [#{jnick}]"
       time = Time.now # FUDGE
   end
 
