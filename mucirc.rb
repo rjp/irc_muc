@@ -62,7 +62,7 @@ Thread.new {
                             s.write(":jirc 305 #{nick} :You are no longer away\n")
                         else
                             pres.show = :away
-                            pres.status = away
+                            pres.status = away.gsub(/^:/, '')
                             s.write(":jirc 306 #{nick} :You are away\n")
                         end
                         m.send(pres)
