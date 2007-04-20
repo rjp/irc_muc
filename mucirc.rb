@@ -1,8 +1,26 @@
 #!/usr/bin/env ruby
-$:.unshift '../../../../../lib/'
 require 'xmpp4r'
 require 'xmpp4r/muc/helper/simplemucclient'
 require 'xmpp4r/presence'
+
+
+require 'logger'
+$log = Logger.new(STDOUT)
+$log.level = Logger::INFO
+
+options = {}
+
+require 'optparse'
+
+options = {}
+OptionParser.new do |opts|
+  opts.banner = "Usage: mucirc.rb [options]"
+
+  opts.on("-d", "--[no-]debugging", "Output debugging") do |d|
+    options[:debugging] = v
+    $log.level = Logger::DEBUG
+  end
+end.parse!
 
 $global_poo = nil
 $global_j_users = ''
@@ -19,9 +37,9 @@ end
 # Print a line formatted depending on time.nil?
 def print_line(time, line)
   if time.nil?
-    puts line
+    $log.debug("+ #{line}")
   else
-    puts "#{time.strftime('%I:%M')} #{line}"
+    $log.debug("#{time.strftime('%I:%M')} #{line}")
   end
 end
 
@@ -41,14 +59,15 @@ server = TCPServer.new('localhost', port)
 Thread.new {
     nick = jnick
 	loop do
+      $log.info("Waiting for IRC connection")
 	  Thread.start(server.accept) do |s|
         $global_poo = s
-        print(s, " is accepted (#{$global_poo})\n")
+        $log.debug("#{s} is accepted (#{$global_poo})\n")
         begin
 		    while s.gets do
                 $_.chomp
 		        command, *args = $_.gsub(/\r/, '').split(' ')
-                puts "c=#{command} a=#{args.inspect}"
+                $log.debug("c=#{command} a=#{args.inspect}")
                 case command 
                     when 'AWAY':
                         away = args[0]
@@ -89,15 +108,14 @@ Thread.new {
 # when you join a channel, that's the only one you're in.  kinda.
                         $global_chan = chan 
                         jchan = chan.gsub(/^#/,'') << '@conference.jabber.pi.st/' << nick
-                        puts "in future, I will join jabber://#{jchan}"
+                        $log.debug("in future, I will join jabber://#{jchan}")
                         s.write(":jirc 332 #{nick} #{chan} :#{$global_subject}\n")
                         s.write(":jirc 353 #{nick} = #{chan} :#{nick} #{$global_j_users}\n")
                         s.write(":jirc 366 #{nick} #{chan} :END OF NAMES\n")
                     when 'PRIVMSG':
                         receiver = args.shift
-                        p m.roster[receiver]
                         text = args.join(' ').gsub(/^:/, '').gsub(%r{^\001ACTION },'/me ').gsub(%r{\001$}, '')
-                        puts "send [#{text}] to channel #{receiver}"
+                        $log.debug("send [#{text}] to channel #{receiver}")
                         case receiver
                             when /^#/: m.say(text)
                             else m.say(text, receiver)
@@ -111,15 +129,15 @@ Thread.new {
                         m.subject = text
                         s.write(":#{nick} TOPIC #{receiver} :#{text}\n")
                     else
-                        puts $_.chomp
+                        $log.warn("Unhandled IRC: #{$_.chomp}")
                 end
 		    end
             $global_poo = nil
-		    print(s, " is gone\n")
+		    $log.debug("#{s} is gone\n")
 		    s.close
         rescue => bork
             $global_poo = nil
-            puts "#{bork}, restarting accept"
+            $log.error("#{bork}, restarting accept")
         end
 	  end
     end
@@ -130,16 +148,16 @@ mainthread = Thread.current
 
 # SimpleMUCClient callback-blocks
 m.add_presence_callback { |x|
-    puts "#{x.type||'NIL'} #{x.show} #{x.status} #{x.from} #{x.to}"
+    $log.debug("#{x.type||'NIL'} #{x.show} #{x.status} #{x.from} #{x.to}")
     unless $global_poo.nil? then
         nick = x.from.to_s.gsub(%r{^.*/}, '')
 
 	    if x.show.nil? then # available
-	        puts "UNAWAY from #{x.from} -> #{nick}"
+	        $log.debug("UNAWAY from #{x.from} -> #{nick}")
             $global_poo.write(":jirc 305 #{nick} :You are no longer away\n")
             $global_away[nick] = nil
 	    else
-	        puts "AWAY from #{x.from} -> #{nick}"
+	        $log.debug("AWAY from #{x.from} -> #{nick}")
             $global_poo.write(":jirc 306 #{nick} :You are away\n")
             $global_away[nick] = x.status
 	    end
@@ -150,7 +168,7 @@ m.on_join { |time,nick|
   print_line time, "#{nick} has joined!"
   $global_j_users = m.roster.keys.join(' ')
     unless time
-    puts "#{nick}!~#{nick}@localhost JOIN :#{$global_chan}"
+    $log.debug("#{nick}!~#{nick}@localhost JOIN :#{$global_chan}")
         unless $global_poo.nil? 
             $global_poo.write(":#{nick}!~#{nick}@localhost JOIN :#{$global_chan}\n")
         end
@@ -161,7 +179,7 @@ m.on_leave { |time,nick|
   $global_j_users = m.roster.keys.join(' ')
     unless time
         unless $global_poo.nil? 
-            puts "#{nick}!~#{nick}@localhost PART #{$global_chan} :#{nick}"
+            $log.debug("#{nick}!~#{nick}@localhost PART #{$global_chan} :#{nick}")
             $global_poo.write(":#{nick}!~#{nick}@localhost PART #{$global_chan} :#{nick}\n")
         end
     end
@@ -191,7 +209,7 @@ m.on_message { |time,nick,text|
   unless time 
     unless $global_poo.nil?
 	    irctext = text.gsub(%r{^/me (.*)$}) { "\001ACTION #{$1}\001" }
-	    puts (":#{nick}!~#{nick}@localhost PRIVMSG #{$global_chan} :#{irctext} [[#{text}]]")
+	    $log.info(":#{nick}!~#{nick}@localhost PRIVMSG #{$global_chan} :#{irctext} [[#{text}]]")
 	    $global_poo.write(":#{nick}!~#{nick}@frottage.org PRIVMSG #{$global_chan} :#{irctext}\n")
     end
   end
@@ -201,10 +219,10 @@ m.on_room_message { |time,text|
 }
 m.on_subject { |time,nick,subject|
   print_line time, "*** (#{nick}) #{subject}"
-  puts "set the topic to [#{subject}] by #{nick}"
   $global_subject = subject
   unless time
 	  unless $global_poo.nil? then
+            $log.info("set the topic to [#{subject}] by #{nick}")
 	        $global_poo.write(":jirc 332 #{nick} #{$global_chan} :#{$global_subject}\n")
 	  end
   end
