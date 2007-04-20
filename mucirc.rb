@@ -109,6 +109,7 @@ Thread.new {
                         receiver = args.shift
                         text = args.join(' ').gsub(/^:/, '')
                         m.subject = text
+                        s.write(":#{nick} TOPIC #{receiver} :#{text}\n")
                     else
                         puts $_.chomp
                 end
