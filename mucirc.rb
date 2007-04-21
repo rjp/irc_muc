@@ -65,10 +65,26 @@ Thread.new {
         $log.debug("#{s} is accepted (#{$global_poo})\n")
         begin
 		    while s.gets do
-                $_.chomp
-		        command, *args = $_.gsub(/\r/, '').split(' ')
+		        command, *args = $_.chomp.gsub(/\r/, '').split(' ')
                 $log.debug("c=#{command} a=#{args.inspect}")
                 case command 
+                    when 'WHOWAS':
+                        onick = args[0].to_s
+                        s.write(":jirc 369 #{nick} #{onick} :End of WHOWAS list\n")
+                    when 'WHOIS': 
+                        onick = args[0].to_s
+                        if m.roster[args[0]].nil? then
+                            s.write(":jirc 401 #{nick} #{onick} :No such nick or channel name\n")
+                            $log.debug(":jirc 401 #{nick} #{onick} :No such nick or channel name")
+                        else
+                            $log.debug("id=#{m.roster[onick].id} from=#{m.roster[onick].from}")
+                            $log.debug("#{m.roster[onick].x.first_element('item').methods.sort.join(' ')}")
+                            m.roster[onick].x.each_element { |p| $log.debug(p.inspect) }
+                            realname = m.roster[onick].x.first_element('item').jid
+                            s.write(":jirc 311 #{nick} #{onick} ~#{onick}. localhost * :#{realname}\n")
+                            s.write(":jirc 319 #{nick} #{onick} :+#{$global_chan}\n")
+                            s.write(":jirc 318 #{nick} #{onick} :End of WHOIS\n")
+                        end
                     when 'AWAY':
                         away = args[0]
                         pres = Jabber::Presence.new
