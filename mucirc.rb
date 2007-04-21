@@ -17,7 +17,7 @@ OptionParser.new do |opts|
   opts.banner = "Usage: mucirc.rb [options]"
 
   opts.on("-d", "--[no-]debugging", "Output debugging") do |d|
-    options[:debugging] = v
+    options[:debugging] = true
     $log.level = Logger::DEBUG
   end
 end.parse!
