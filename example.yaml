@@ -1,0 +1,14 @@
+default: faveroom
+faveroom:
+    jid: jid@server
+    password: passw
+    room: faveroom@conference.server/bigboy
+    port: 6696
+    irc: '#faveroom'
+horses:
+    jid: jid@server
+    password: passw
+    room: 'horses@conference.server/i:love:horses'
+    port: 6698
+    irc: '#horses'
+

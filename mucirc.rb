@@ -2,7 +2,7 @@
 require 'xmpp4r'
 require 'xmpp4r/muc/helper/simplemucclient'
 require 'xmpp4r/presence'
-
+require 'yaml'
 
 require 'logger'
 $log = Logger.new(STDOUT)
@@ -20,6 +20,9 @@ OptionParser.new do |opts|
     options[:debugging] = true
     $log.level = Logger::DEBUG
   end
+  opts.on("-f", "--config FILE", "Config file") do |f|
+    options[:configfile] = f
+  end
 end.parse!
 
 $global_poo = nil
@@ -29,10 +32,17 @@ $global_nick = nil
 $global_chan = nil
 $global_away = {}
 
-if ARGV.size != 5
-  puts "Usage: #{$0} <jid> <password> <room@conference/nick> <port> <room>"
-  exit
+config = {}
+begin
+    global_config = YAML.load_file(options[:configfile])
+    default = global_config['default'] || (global_config.keys.sort)[0]
+    config = global_config[ARGV[0]] || global_config[default]
+rescue => e
+    puts "Usage: #{$0} config.yml [#{e}]"
+    exit
 end
+
+# config = { 'jid' => ARGV[0], 'password' => ARGV[1], 'room' => ARGV[2], 'port' => ARGV[3], 'irc' => ARGV[4] }
 
 # Print a line formatted depending on time.nil?
 def print_line(time, line)
@@ -44,22 +54,22 @@ def print_line(time, line)
 end
 
 #Jabber::debug = true
-cl = Jabber::Client.new(Jabber::JID.new(ARGV[0]))
+cl = Jabber::Client.new(Jabber::JID.new(config['jid']))
 cl.connect
-cl.auth(ARGV[1])
+cl.auth(config['password'])
 
 # This is the SimpleMUCClient helper!
 m = Jabber::MUC::SimpleMUCClient.new(cl)
-jnick = ARGV[2].gsub(%r{^.*/}, '')
+jnick = config['room'].gsub(%r{^.*/}, '')
 
 require 'socket'
-port = (ARGV[3] || 6692).to_i
+port = (config['port'] || 6692).to_i
 server = TCPServer.new('localhost', port)
 
 Thread.new {
     nick = jnick
 	loop do
-      $log.info("Waiting for IRC connection")
+      $log.info("Waiting for IRC connection on port #{config['port']}")
 	  Thread.start(server.accept) do |s|
         $global_poo = s
         $log.debug("#{s} is accepted (#{$global_poo})\n")
@@ -88,8 +98,8 @@ Thread.new {
                     when 'AWAY':
                         away = args[0]
                         pres = Jabber::Presence.new
-                        pres.to = ARGV[2].gsub(%r{/.*$}, '')
-                        pres.from = ARGV[0]
+                        pres.to = config['room'].gsub(%r{/.*$}, '')
+                        pres.from = config['jid']
                         pres.type = :available
                         if away == ':' then
                             pres.show = nil
@@ -245,7 +255,7 @@ m.on_subject { |time,nick,subject|
   end
 }
 
-m.join(ARGV[2])
+m.join(config['room'])
 
 # Wait for being waken up by m.on_message
 Thread.stop
