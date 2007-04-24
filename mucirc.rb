@@ -225,7 +225,7 @@ m.on_message { |time,nick,text|
   unless time 
     unless $global_poo.nil?
         text.gsub(%r{^/me (.*)$}) { "\001ACTION #{$1}\001" }.split("\n").each { |irctext|
-	        $log.info(":#{nick}!~#{nick}@localhost PRIVMSG #{$global_chan} :#{irctext} [[#{text}]]")
+	        $log.debug(":#{nick}!~#{nick}@localhost PRIVMSG #{$global_chan} :#{irctext} [[#{text}]]")
 	        $global_poo.write(":#{nick}!~#{nick}@frottage.org PRIVMSG #{$global_chan} :#{irctext}\n")
         }
     end
