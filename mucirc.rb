@@ -113,6 +113,7 @@ Thread.new {
                         m.send(pres)
                     when 'USER': 
                         s.write("375 #{nick} :- MOTD\n"); s.write("376 #{nick} :- END OF MOTD\n");
+			s.write("001 Welcome to Jabber Gateway #{nick}\n")
                     when 'NICK': 
                         i_nick = args[0]
                     when 'MODE':
@@ -144,6 +145,7 @@ Thread.new {
                         $log.debug("send [#{text}] to channel #{receiver}")
                         case receiver
                             when /^#/: m.say(text)
+                            when /^&/: $log.info("ignoring message to #{receiver}")
                             else m.say(text, receiver)
                                 unless m.roster[receiver].show.nil? then
                                     s.write(":jirc 301 #{nick} #{receiver} :#{m.roster[receiver].status}\n")
