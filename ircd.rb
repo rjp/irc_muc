@@ -35,6 +35,8 @@ class Ircd < EventMachine::Connection
             crlf("376 #{@nick} :- END OF MOTD")
         when 'JOIN':
             c_join(args[0].gsub(/^#/,''))
+	when 'QUIT':
+		c_quit()
         end
     end
 
@@ -53,7 +55,16 @@ class Ircd < EventMachine::Connection
 	# quit the IRC session, gracefully closing all the mucs first
 	def c_quit()
     	puts "closing mucs"
+	cb = proc { 
+		sleep 5
+		return 1
+	}
 	# @muc.each {|chan,mucobj| }
-	# callback
+	EventMachine::defer (cb, proc {|r| on_quit(r)})
+	end
+
+	def on_quit(r)
+		crlf('BYE')
+		self.close_connection()
 	end
 end
