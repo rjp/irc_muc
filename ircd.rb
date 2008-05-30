@@ -34,13 +34,26 @@ class Ircd < EventMachine::Connection
             crlf("375 #{@nick} :- MOTD")
             crlf("376 #{@nick} :- END OF MOTD")
         when 'JOIN':
-            c_join(args[0])
+            c_join(args[0].gsub(/^#/,''))
         end
     end
 
+	# spawn a muc connecting us to a particular room
     def c_join(chan)
-        puts "spawning a muc for #{chan.gsub(/^#/,'')}@server/#{@nick}"
-# cb = proc { @muc[chan] = Muc.new(chan.gsub(/^#/,'')) }
-# defer(cb, self.on_join)
+        puts "spawning a muc for #{chan}@server/#{@nick}"
+		# cb = proc { @muc[chan] = Muc.new(chan) }
+		# how do we return stuff from a defered event?
+		# defer(cb, proc { self.on_join(chan) })
     end
+
+	def on_join(chan)
+		@muc[chan] = something
+	end
+
+	# quit the IRC session, gracefully closing all the mucs first
+	def c_quit()
+    	puts "closing mucs"
+	# @muc.each {|chan,mucobj| }
+	# callback
+	end
 end
