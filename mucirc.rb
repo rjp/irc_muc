@@ -116,6 +116,7 @@ Thread.new {
 			s.write("001 Welcome to Jabber Gateway #{nick}\n")
                     when 'NICK': 
                         i_nick = args[0]
+			nick = i_nick
                     when 'MODE':
                         if args[0] == $global_chan then
                             s.write(":jirc 324 #{nick} #{$global_chan} +\n")
@@ -136,6 +137,7 @@ Thread.new {
                         $global_chan = chan 
                         jchan = chan.gsub(/^#/,'') << '@conference.jabber.pi.st/' << nick
                         $log.debug("in future, I will join jabber://#{jchan}")
+			s.write(":#{nick}!bot@pi.st JOIN #{chan}\n")
                         s.write(":jirc 332 #{nick} #{chan} :#{$global_subject}\n")
                         s.write(":jirc 353 #{nick} = #{chan} :#{nick} #{$global_j_users}\n")
                         s.write(":jirc 366 #{nick} #{chan} :END OF NAMES\n")
