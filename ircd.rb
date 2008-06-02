@@ -52,7 +52,7 @@ class Ircd < EventMachine::Connection
 	# spawn a muc connecting us to a particular room
     def c_join(chan)
         puts "spawning a muc for #{chan}@server/#{@nick} at #{Time.now}"
-	cb = proc { return Muc.new(chan) }
+	cb = proc { return Muc.new(chan, ircd) }
 	EventMachine::defer(cb, proc {|muc| self.on_join(muc, chan) })
     end
 
@@ -79,5 +79,9 @@ class Ircd < EventMachine::Connection
 	def on_quit(r)
 		crlf('BYE')
 		self.close_connection()
+	end
+
+	def topic(room, topic)
+		crlf(":#{@nick} TOPIC #{room} :#{topic}")
 	end
 end
