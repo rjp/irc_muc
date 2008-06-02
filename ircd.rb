@@ -2,6 +2,7 @@ require 'rubygems'
 require 'eventmachine'
 require 'muc'
 
+
 =begin
 
 IRC server implemented as an EventMachine eventer
@@ -50,12 +51,13 @@ class Ircd < EventMachine::Connection
 
 	# spawn a muc connecting us to a particular room
     def c_join(chan)
-        puts "spawning a muc for #{chan}@server/#{@nick}"
+        puts "spawning a muc for #{chan}@server/#{@nick} at #{Time.now}"
 	cb = proc { return Muc.new(chan) }
 	EventMachine::defer(cb, proc {|muc| self.on_join(muc, chan) })
     end
 
 	def on_join(muc, chan)
+		puts "final on_join at #{Time.now}"
 		@muc[chan] = muc
 		crlf(":#{@nick} JOIN ##{chan}")
 		wb(332, @nick, "##{chan}", ":#{muc.topic}")
