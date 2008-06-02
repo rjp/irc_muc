@@ -7,3 +7,13 @@ password        password
 conference      moo@conference.jabber.pi.st
 irc port        6692
 irc room        #moo
+
+---
+user sends "/join #sports"
+ircd locks MUTEX A
+ircd makes a callback to tell the user they're on '#sports'
+ircd requests muc to join 'sports' with MUTEX A <- this must not terminate until the join is done
+ircd spins waiting for MUTEX A to be unlocked
+muc sets a callback for on_join
+muc sends off jabber request
+on_join callback unlocks MUTEX A
