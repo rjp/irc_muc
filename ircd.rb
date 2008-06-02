@@ -44,15 +44,21 @@ class Ircd < EventMachine::Connection
 			crlf("001 #{@nick} :Welcome to muc")
         when 'JOIN':
             c_join(args[0].gsub(/^#/,''))
+		when 'TOPIC':
+			c_topic(args[0].gsub(/^#/,''), args[1].gsub(/^:/,''))
 	when 'QUIT':
 		c_quit()
         end
     end
 
+	def c_topic(chan, topic)
+		cb = proc { muc.set_subject(topic) } # has to be a method
+		EventMachine::defer(cb, proc {|muc| self.on_topic(muc, chan) })
+
 	# spawn a muc connecting us to a particular room
     def c_join(chan)
         puts "spawning a muc for #{chan}@server/#{@nick} at #{Time.now}"
-	cb = proc { return Muc.new(chan, ircd) }
+	cb = proc { return Muc.new(chan, self) }
 	EventMachine::defer(cb, proc {|muc| self.on_join(muc, chan) })
     end
 
@@ -63,6 +69,8 @@ class Ircd < EventMachine::Connection
 		wb(332, @nick, "##{chan}", ":#{muc.topic}")
 		wb(353, @nick, "= ##{chan}", ":#{nick} billythefish") 
 		wb(366, @nick, "##{chan}", ":END OF NAMES")
+
+		muc.on_topic()
 	end
 
 	# quit the IRC session, gracefully closing all the mucs first
@@ -81,7 +89,7 @@ class Ircd < EventMachine::Connection
 		self.close_connection()
 	end
 
-	def topic(room, topic)
-		crlf(":#{@nick} TOPIC #{room} :#{topic}")
+	def topic(room, nick, topic)
+		wb(332, nick, "##{room}", ":#{topic}")
 	end
 end
