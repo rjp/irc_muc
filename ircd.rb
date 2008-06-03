@@ -48,22 +48,39 @@ class Ircd < EventMachine::Connection
 			c_topic(args[0].gsub(/^#/,''), args[1].gsub(/^:/,''))
 	when 'QUIT':
 		c_quit()
+        when 'PRIVMSG':
+			receiver = args.shift
+			text = args.join(' ').gsub(/^:/, '').gsub(%r{^\001ACTION },'/me ').gsub(%r{\001$}, '')
+			case receiver
+			    when /^#/: 
+                    chan = receiver.gsub(/^#/,'')
+                    @muc[chan].chan_message(text)
+			    when /^&/: $log.info("ignoring message to #{receiver}")
+    			else @muc.say(text, receiver)
+       			unless @muc.roster[receiver].show.nil? then
+     			    s.write(":jirc 301 #{nick} #{receiver} :#{m.roster[receiver].status}\n")
+    			end
+			end
         end
     end
 
 	def c_topic(chan, topic)
-		cb = proc { muc.set_subject(topic) } # has to be a method
-		EventMachine::defer(cb, proc {|muc| self.on_topic(muc, chan) })
+		muc.set_subject(topic) # has to be a method
+    end
 
 	# spawn a muc connecting us to a particular room
     def c_join(chan)
         puts "spawning a muc for #{chan}@server/#{@nick} at #{Time.now}"
 	cb = proc { return Muc.new(chan, self) }
-	EventMachine::defer(cb, proc {|muc| self.on_join(muc, chan) })
+        puts "testing: a muc for #{chan}@server/#{@nick} at #{Time.now}"
+	oj = proc {|muc| self.on_join(muc) }
+        puts "thirding: a muc for #{chan}@server/#{@nick} at #{Time.now}"
+	    EventMachine::defer(cb, oj)
     end
 
-	def on_join(muc, chan)
-		puts "final on_join at #{Time.now}"
+	def on_join(muc)
+        chan = muc.irc_room
+		puts "final on_join at #{Time.now} for #{@nick}:#{chan}"
 		@muc[chan] = muc
 		crlf(":#{@nick} JOIN ##{chan}")
 		wb(332, @nick, "##{chan}", ":#{muc.topic}")
