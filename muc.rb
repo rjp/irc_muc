@@ -20,9 +20,9 @@ class Muc
 #		@cl.auth(config['password'])
 #	    @m = Jabber::MUC::SimpleMUCClient.new(@cl)
 #		@m.on_join { jmutex.unlock() }
-# @m.on_private_message { ircd.receive_line() } # hmm, no, ignore this, make real methods
+# @m.on_private_message { send_privmsgmessageircd.receive_line() } # hmm, no, ignore this, make real methods
 # @m.on_message { ircd.receive_line() }
-# @m.on_subject { |time,nick,subject| @subjectircd.topic(@room, nick, subject); @gate[:subject].unlock() }
+# @m.on_subject { |time,nick,subject| send_on_subject(subject) }
 		puts "spawning a muc in the muc"
 		@topic = 'no topic is yet set'
 		
@@ -42,13 +42,7 @@ class Muc
 		puts "->J: #{words}"
 	end
 
-	def on_topic()
+	def send_on_subject(topic)
 		@ircd.topic(@room, 'fish', 'gills')
-	end
-
-	def set_subject(topic)
-		@gate[:subject].lock()
-		m.subject = topic
-		@gate[:subject].lock() # spin here until we receive the on_subject callback
 	end
 end
