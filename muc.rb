@@ -13,6 +13,7 @@ class Muc
     attr_accessor :cl, :m, :topic, :ircd, :irc_room
 
     @@config = YAML.load_file('quick.yaml')
+    p @@config
 
     def initialize(irc_room, ircd)
 		@ircd = ircd
@@ -25,19 +26,20 @@ class Muc
 	    @m = Jabber::MUC::SimpleMUCClient.new(@cl)
 #		@m.on_join { jmutex.unlock() }
 # @m.on_private_message { ircd.receive_line() } # hmm, no, ignore this, make real methods
-# @m.on_message { ircd.receive_line() }
-# @m.on_subject { |time,nick,subject| @subjectircd.topic(@irc_room, nick, subject); @gate[:subject].unlock() }
-		puts "spawning a muc in the muc"
+        @m.on_message { |time,nick,text|
+            handle_message(time, nick, text)
+        }
+        @m.on_subject { |time,nick,subject| 
+            @topic = subject
+            @ircd.topic(@irc_room, nick, subject)
+        }
 		@topic = 'no topic is yet set'
 		
 		jmutex = Mutex.new()
 		jmutex.lock()
     @m.on_join { jmutex.unlock() }
-		puts "spawning slow thread for #{@ircd.nick} in #{irc_room}"
 		@m.join(irc_room + '@' + @@config[:conf] + '/' + @ircd.nick)
-		puts "spinning on mutex at #{Time.now} for #{@ircd.nick}"
 		jmutex.lock()
-		puts "unlocked mutex at #{Time.now}, my irc_room is #{irc_room}"
 		jmutex.unlock()
 		return self, irc_room
     end
@@ -46,17 +48,25 @@ class Muc
 		puts "->J: #{words}"
 	end
 
-	def on_topic()
-		@ircd.topic(@irc_room, 'fish', 'gills')
-	end
+    def roster
+        @m.roster
+    end
 
 	def set_subject(topic)
-		@gate[:subject].lock()
 		m.subject = topic
-		@gate[:subject].lock() # spin here until we receive the on_subject callback
 	end
 
     def chan_message(text)
         @m.say(text)
     end 
+
+    def handle_message(time, nick, text)
+        if nick != @ircd.nick then
+            if time.nil? then
+            text.gsub(%r{^/me (.*)$}) { "\001ACTION #{$1}\001" }.split("\n").each { |irctext|
+                @ircd.chan_message(@irc_room, nick, irctext)
+            }
+        end
+        end
+    end
 end
