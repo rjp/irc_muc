@@ -4,45 +4,69 @@ require 'xmpp4r/presence'
 require 'yaml'
 require 'thread'
 
+# Jabber::debug = true
+
 # how do we synchronise two asynchronous threads, both using callbacks?
 # mutex?
 
 class Muc
-    attr_accessor :cl, :m, :topic, :ircd, :room
+    attr_accessor :cl, :m, :topic, :ircd, :irc_room
 
-    def initialize(room, ircd)
+    @@config = YAML.load_file('quick.yaml')
+    p @@config
+
+    def initialize(irc_room, ircd)
 		@ircd = ircd
-		@room = room
+		@irc_room = irc_room
 		@gate = Hash.new { |h,k| h[k] = Mutex.new() }
 
-#		@cl = Jabber::Client.new(Jabber::JID.new(config['jid']))
-#		@cl.connect
-#		@cl.auth(config['password'])
-#	    @m = Jabber::MUC::SimpleMUCClient.new(@cl)
+		@cl = Jabber::Client.new(Jabber::JID.new(@@config[:jid]))
+		@cl.connect
+		@cl.auth(@@config[:pass])
+	    @m = Jabber::MUC::SimpleMUCClient.new(@cl)
 #		@m.on_join { jmutex.unlock() }
-# @m.on_private_message { send_privmsgmessageircd.receive_line() } # hmm, no, ignore this, make real methods
-# @m.on_message { ircd.receive_line() }
-# @m.on_subject { |time,nick,subject| send_on_subject(subject) }
-		puts "spawning a muc in the muc"
+# @m.on_private_message { ircd.receive_line() } # hmm, no, ignore this, make real methods
+        @m.on_message { |time,nick,text|
+            handle_message(time, nick, text)
+        }
+        @m.on_subject { |time,nick,subject| 
+            @topic = subject
+            @ircd.topic(@irc_room, nick, subject)
+        }
 		@topic = 'no topic is yet set'
 		
 		jmutex = Mutex.new()
 		jmutex.lock()
-		puts "spawning slow thread"
-		# @m.join(room << config['confserver'])
-		Thread.new { sleep 5; jmutex.unlock() }
-		puts "spinning on mutex at #{Time.now}"
+    @m.on_join { jmutex.unlock() }
+		@m.join(irc_room + '@' + @@config[:conf] + '/' + @ircd.nick)
 		jmutex.lock()
-		puts "unlocked mutex at #{Time.now}"
 		jmutex.unlock()
-		return self
+		return self, irc_room
     end
 
 	def send(words)
 		puts "->J: #{words}"
 	end
 
-	def send_on_subject(topic)
-		@ircd.topic(@room, 'fish', 'gills')
+    def roster
+        @m.roster
+    end
+
+	def set_subject(topic)
+		m.subject = topic
 	end
+
+    def chan_message(text)
+        @m.say(text)
+    end 
+
+    def handle_message(time, nick, text)
+        if nick != @ircd.nick then
+            if time.nil? then
+            text.gsub(%r{^/me (.*)$}) { "\001ACTION #{$1}\001" }.split("\n").each { |irctext|
+                @ircd.chan_message(@irc_room, nick, irctext)
+            }
+        end
+        end
+    end
 end

@@ -35,6 +35,7 @@ class Ircd < EventMachine::Connection
     def receive_line(line)
         command, *args = line.chomp.gsub(/\r/, '').split(' ')
         puts "c=[#{command}] a=[#{args.inspect}]"
+
         case command
         when 'NICK':
             @nick = args[0].gsub(/^:/,'')
@@ -48,29 +49,43 @@ class Ircd < EventMachine::Connection
 			c_topic(args[0].gsub(/^#/,''), args[1].gsub(/^:/,''))
 	when 'QUIT':
 		c_quit()
+        when 'PRIVMSG':
+			receiver = args.shift
+			text = args.join(' ').gsub(/^:/, '').gsub(%r{^\001ACTION },'/me ').gsub(%r{\001$}, '')
+			case receiver
+			    when /^#/: 
+                    chan = receiver.gsub(/^#/,'')
+                    @muc[chan].chan_message(text)
+			    when /^&/: $log.info("ignoring message to #{receiver}")
+    			else @muc.say(text, receiver)
+       			unless @muc.roster[receiver].show.nil? then
+     			    s.write(":jirc 301 #{nick} #{receiver} :#{m.roster[receiver].status}\n")
+    			end
+			end
         end
     end
 
 	def c_topic(chan, topic)
-		cb = proc { muc.set_subject(topic) } # has to be a method
-		EventMachine::defer(cb, proc {|muc| self.on_topic(muc, chan) })
+		@muc[chan].set_subject(topic) # has to be a method
+    end
 
 	# spawn a muc connecting us to a particular room
     def c_join(chan)
-        puts "spawning a muc for #{chan}@server/#{@nick} at #{Time.now}"
-	cb = proc { return Muc.new(chan, self) }
-	EventMachine::defer(cb, proc {|muc| self.on_join(muc, chan) })
+        if @muc[chan].nil? then
+	    	cb = proc { return Muc.new(chan, self) }
+	    	oj = proc {|muc| @muc[chan] = muc; self.on_join(muc) }
+		    EventMachine::defer(cb, oj)
+        else
+            on_join(muc)
+        end
     end
 
-	def on_join(muc, chan)
-		puts "final on_join at #{Time.now}"
-		@muc[chan] = muc
+	def on_join(muc)
+        chan = muc.irc_room
 		crlf(":#{@nick} JOIN ##{chan}")
 		wb(332, @nick, "##{chan}", ":#{muc.topic}")
-		wb(353, @nick, "= ##{chan}", ":#{nick} billythefish") 
+		wb(353, @nick, "= ##{chan}", ":#{nick} " + muc.roster.keys.join(' '))
 		wb(366, @nick, "##{chan}", ":END OF NAMES")
-
-		muc.on_topic()
 	end
 
 	# quit the IRC session, gracefully closing all the mucs first
@@ -80,7 +95,7 @@ class Ircd < EventMachine::Connection
 		sleep 5
 		return 1
 	}
-	# @muc.each {|chan,mucobj| }
+#	@muc.each {|chan,mucobj| }
 	EventMachine::defer (cb, proc {|r| on_quit(r)})
 	end
 
@@ -92,4 +107,8 @@ class Ircd < EventMachine::Connection
 	def topic(room, nick, topic)
 		wb(332, nick, "##{room}", ":#{topic}")
 	end
+
+    def chan_message(room, nick, text)
+        crlf(":#{nick}!~#{nick}@p.q PRIVMSG ##{room} :#{text}")
+    end
 end
