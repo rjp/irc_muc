@@ -1,5 +1,3 @@
-require 'rubygems'
-require 'eventmachine'
 require 'muc'
 
 
@@ -10,10 +8,8 @@ IRC server implemented as an EventMachine eventer
 =end
 
 
-class Ircd < EventMachine::Connection
+class Ircd
     attr_accessor :muc, :nick
-
-    include EventMachine::Protocols::LineText2
 
     def crlf(args)
         self.send_data(*args << "\n")
@@ -72,9 +68,10 @@ class Ircd < EventMachine::Connection
 	# spawn a muc connecting us to a particular room
     def c_join(chan)
         if @muc[chan].nil? then
-	    	cb = proc { return Muc.new(chan, self) }
-	    	oj = proc {|muc| @muc[chan] = muc; self.on_join(muc) }
-		    EventMachine::defer(cb, oj)
+		Muc.new(chan, self)
+#cb = proc { return Muc.new(chan, self) }
+#	    	oj = proc {|muc| @muc[chan] = muc; self.on_join(muc) }
+#		    EventMachine::defer(cb, oj)
         else
             on_join(muc)
         end
@@ -96,7 +93,7 @@ class Ircd < EventMachine::Connection
 		return 1
 	}
 #	@muc.each {|chan,mucobj| }
-	EventMachine::defer (cb, proc {|r| on_quit(r)})
+#	EventMachine::defer (cb, proc {|r| on_quit(r)})
 	end
 
 	def on_quit(r)
@@ -110,5 +107,11 @@ class Ircd < EventMachine::Connection
 
     def chan_message(room, nick, text)
         crlf(":#{nick}!~#{nick}@p.q PRIVMSG ##{room} :#{text}")
+    end
+
+    def initialize()
+    end
+
+    def destroy()
     end
 end
