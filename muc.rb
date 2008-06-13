@@ -29,18 +29,17 @@ class Muc
         @m.on_message { |time,nick,text|
             handle_message(time, nick, text)
         }
+        @m.on_private_message { |time,nick,text|
+            handle_private_message(time, nick, text)
+        }
         @m.on_subject { |time,nick,subject| 
             @topic = subject
             @ircd.topic(@irc_room, nick, subject)
         }
 		@topic = 'no topic is yet set'
 		
-		jmutex = Mutex.new()
-		jmutex.lock()
-    @m.on_join { jmutex.unlock() }
+        @m.on_join { @ircd.on_join(self) }
 		@m.join(irc_room + '@' + @@config[:conf] + '/' + @ircd.nick)
-		jmutex.lock()
-		jmutex.unlock()
 		return self, irc_room
     end
 
@@ -60,6 +59,10 @@ class Muc
         @m.say(text)
     end 
 
+    def priv_message(text, who)
+        @m.say("->#{who} `#{text}'")
+    end
+
     def handle_message(time, nick, text)
         if nick != @ircd.nick then
             if time.nil? then
@@ -67,6 +70,14 @@ class Muc
                 @ircd.chan_message(@irc_room, nick, irctext)
             }
         end
+        end
+    end
+
+    def handle_private_message(time, nick, text)
+        if time.nil? then
+            text.gsub(%r{^/me (.*)$}) { "\001ACTION #{$1}\001" }.split("\n").each { |irctext|
+                @ircd.priv_message(@irc_room, nick, irctext)
+            }
         end
     end
 end

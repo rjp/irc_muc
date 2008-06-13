@@ -9,7 +9,11 @@ IRC server implemented as an EventMachine eventer
 
 
 class Ircd
-    attr_accessor :muc, :nick
+    attr_accessor :muc, :nick, :socket, :user, :pass
+
+    def send_data(data)
+        @socket.write data
+    end
 
     def crlf(args)
         self.send_data(*args << "\n")
@@ -18,14 +22,12 @@ class Ircd
 
     def wb(code, nick, dest, words)
     	crlf(":jirc #{code} #{nick} #{dest} #{words}")
-		self.send_data('')
 	end
 
     def post_init()
         puts "connected"
 # :localhost NOTICE AUTH :BitlBee-IRCd initialized, please go on
         crlf(":jirc NOTICE AUTH :ircmuc initialised, continue")
-        @muc = Hash.new()
     end
 
     def receive_line(line)
@@ -51,9 +53,11 @@ class Ircd
 			case receiver
 			    when /^#/: 
                     chan = receiver.gsub(/^#/,'')
+                    p @muc
                     @muc[chan].chan_message(text)
 			    when /^&/: $log.info("ignoring message to #{receiver}")
-    			else @muc.say(text, receiver)
+    			else # TODO work out who is who on which channel where
+                    @muc[chan].priv_message(text, receiver)
        			unless @muc.roster[receiver].show.nil? then
      			    s.write(":jirc 301 #{nick} #{receiver} :#{m.roster[receiver].status}\n")
     			end
@@ -68,7 +72,7 @@ class Ircd
 	# spawn a muc connecting us to a particular room
     def c_join(chan)
         if @muc[chan].nil? then
-		Muc.new(chan, self)
+		    @muc[chan], junk = Muc.new(chan, self)
 #cb = proc { return Muc.new(chan, self) }
 #	    	oj = proc {|muc| @muc[chan] = muc; self.on_join(muc) }
 #		    EventMachine::defer(cb, oj)
@@ -109,7 +113,13 @@ class Ircd
         crlf(":#{nick}!~#{nick}@p.q PRIVMSG ##{room} :#{text}")
     end
 
-    def initialize()
+    def priv_message(room, nick, text)
+        crlf(":#{nick}!~#{nick}@p.q PRIVMSG #{nick}##{room} :#{text}")
+    end
+
+    def initialize(socket)
+        @socket = socket
+        @muc = Hash.new()
     end
 
     def destroy()
