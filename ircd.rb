@@ -53,12 +53,13 @@ class Ircd
 			case receiver
 			    when /^#/: 
                     chan = receiver.gsub(/^#/,'')
-                    p @muc
                     @muc[chan].chan_message(text)
 			    when /^&/: $log.info("ignoring message to #{receiver}")
     			else # TODO work out who is who on which channel where
-                    @muc[chan].priv_message(text, receiver)
-       			unless @muc.roster[receiver].show.nil? then
+					muc = nick_to_jid(receiver)
+puts "afterwards #{muc.class}"
+                    muc.priv_message(text, receiver)
+       			unless muc.roster[receiver].show.nil? then
      			    s.write(":jirc 301 #{nick} #{receiver} :#{m.roster[receiver].status}\n")
     			end
 			end
@@ -124,4 +125,22 @@ class Ircd
 
     def destroy()
     end
+
+	def nick_to_jid(nick)
+		possibles = []
+		@muc.each { |n,m|
+			m.roster.each { |k,v|
+				if k == nick then
+					possibles.push [m, v.from]
+				end
+			}
+		}
+		if possibles.size == 1 then
+			return possibles[0][0]
+		else
+			# how do we tiebreak?
+			throw Mushy
+		end
+
+	end
 end

@@ -60,7 +60,10 @@ class Muc
     end 
 
     def priv_message(text, who)
-        @m.say("->#{who} `#{text}'")
+	jid = @m.roster[who].from
+	f = Jabber::Message.new(jid, text)
+	f.type = :chat
+	cl.send(f)	
     end
 
     def handle_message(time, nick, text)
