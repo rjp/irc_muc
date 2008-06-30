@@ -118,8 +118,7 @@ puts "afterwards #{muc.class}"
         crlf(":#{nick}!~#{nick}@p.q PRIVMSG #{nick}##{room} :#{text}")
     end
 
-    def initialize(socket)
-        @socket = socket
+    def initialize()
         @muc = Hash.new()
     end
 
