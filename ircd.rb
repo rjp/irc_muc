@@ -17,7 +17,7 @@ class Ircd
 
     def crlf(args)
         self.send_data(*args << "\n")
-		puts ">>[#{args}]"
+		puts ">>[#{args.chomp}]"
     end
 
     def wb(code, nick, dest, words)
