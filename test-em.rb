@@ -10,7 +10,6 @@ Thread.start(server.accept) do |s|
   	while s.gets do
 		p $_
 		ircd.receive_line($_.chomp.gsub(/\r/,''))
-	    puts "accepting lines"
 	end
 end
 
