@@ -1,4 +1,5 @@
 require 'muc'
+require 'config'
 
 
 =begin
@@ -37,7 +38,16 @@ class Ircd
         case command
         when 'NICK':
             @nick = args[0].gsub(/^:/,'')
+		# rjp%jabber.pi.st@conference.jabber.pi.st
         when 'USER':
+			(x, user, server, confhost) = args[3].match(%r{^:(.+?)%(.+?)@(.+)}).to_a
+			c = Config.instance()
+			c.jid = "#{user}@#{server}"
+			if confhost[-1].chr == '.' then
+				confhost = confhost << server
+			end
+			c.conf = confhost
+			c.dump
             crlf("375 #{@nick} :- MOTD")
             crlf("376 #{@nick} :- END OF MOTD")
 			crlf("001 #{@nick} :Welcome to muc")
