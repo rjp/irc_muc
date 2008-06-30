@@ -1,9 +1,7 @@
 require 'socket'
 require 'ircd'
 
-config = {}
-port = (config['port'] || 6990).to_i
-server = TCPServer.new('localhost', port)
+server = TCPServer.new('localhost', ARGV[0])
 
 ircd = Ircd.new()
 Thread.start(server.accept) do |s|
