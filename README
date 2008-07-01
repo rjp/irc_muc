@@ -1,19 +1,26 @@
+=== irc_muc ===
+
 A simple single user IRC to Jabber MUC gateway.
 
-Input: YAML file configuring all the relevant entities
+{{{
+ruby test-em.rb ircport
+}}}
 
-username        bot@jabber.pi.st
-password        password
-conference      moo@conference.jabber.pi.st
-irc port        6692
-irc room        #moo
+== Configuration ==
 
----
-user sends "/join #sports"
-ircd locks MUTEX A
-ircd makes a callback to tell the user they're on '#sports'
-ircd requests muc to join 'sports' with MUTEX A <- this must not terminate until the join is done
-ircd spins waiting for MUTEX A to be unlocked
-muc sets a callback for on_join
-muc sends off jabber request
-on_join callback unlocks MUTEX A
+|| IRCUSER || user%server@conference.host ||
+|| IRCPASS || the password for user@server ||
+
+== Usage ==
+
+Connect to ircport with irc client.
+
+== Supported IRC actions ==
+
+|| Action || Supported? ||
+|| joining channels || yes ||
+|| changing nick || no ||
+|| changing topic || yes ||
+|| messaging a channel || yes ||
+|| messaging a nick || yes, if nick is unique ||
+|| leaving a channel || no ||
