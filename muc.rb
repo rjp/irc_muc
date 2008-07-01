@@ -4,8 +4,6 @@ require 'xmpp4r/presence'
 require 'yaml'
 require 'thread'
 
-require 'config'
-
 # Jabber::debug = true
 
 # how do we synchronise two asynchronous threads, both using callbacks?
@@ -14,14 +12,16 @@ require 'config'
 class Muc
     attr_accessor :cl, :m, :topic, :ircd, :irc_room
 
-    def initialize(irc_room, ircd)
+    def initialize(irc_room, ircd, jid, pass, confhost)
 		@ircd = ircd
 		@irc_room = irc_room
 
-    	@@config = Config.instance()
+    	@@config = { :jid => jid, :conf => confhost, :pass => pass }
+
 		@cl = Jabber::Client.new(Jabber::JID.new(@@config[:jid]))
 		@cl.connect
 		@cl.auth(@@config[:pass])
+
 	    @m = Jabber::MUC::SimpleMUCClient.new(@cl)
         @m.on_message { |time,nick,text|
             handle_message(time, nick, text)

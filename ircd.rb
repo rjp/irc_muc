@@ -1,6 +1,4 @@
 require 'muc'
-require 'config'
-
 
 =begin
 
@@ -48,7 +46,7 @@ class Ircd
 			if confhost[-1].chr == '.' then
 				confhost = confhost << server
 			end
-			c.conf = confhost
+			@conf = confhost
 
             crlf("375 #{@nick} :- MOTD")
             crlf("376 #{@nick} :- END OF MOTD")
@@ -85,7 +83,7 @@ puts "afterwards #{muc.class}"
 	# spawn a muc connecting us to a particular room
     def c_join(chan)
         if @muc[chan].nil? then
-		    @muc[chan], junk = Muc.new(chan, self)
+		    @muc[chan], junk = Muc.new(chan, self, @jid, @pass, @confhost)
         else
             on_join(muc)
         end
