@@ -10,7 +10,8 @@ IRC server
 
 
 class Ircd
-    attr_accessor :muc, :nick, :socket, :user, :pass
+    attr_accessor :muc, :nick, :socket
+	attr_accessor :jid, :user, :pass, :confhost
 
     def send_data(data)
         @socket.write data
@@ -38,16 +39,17 @@ class Ircd
         case command
         when 'NICK':
             @nick = args[0].gsub(/^:/,'')
-		# rjp%jabber.pi.st@conference.jabber.pi.st
+
         when 'USER':
+			# rjp%jabber.pi.st@conference.jabber.pi.st
 			(x, user, server, confhost) = args[3].match(%r{^:(.+?)%(.+?)@(.+)}).to_a
-			c = Config.instance()
-			c.jid = "#{user}@#{server}"
+
+			@jid = "#{user}@#{server}"
 			if confhost[-1].chr == '.' then
 				confhost = confhost << server
 			end
 			c.conf = confhost
-			c.dump
+
             crlf("375 #{@nick} :- MOTD")
             crlf("376 #{@nick} :- END OF MOTD")
 			crlf("001 #{@nick} :Welcome to muc")
