@@ -41,6 +41,10 @@ class Ircd
         when 'USER':
 			# rjp%jabber.pi.st@conference.jabber.pi.st
 			(x, user, server, confhost) = args[3].match(%r{^:(.+?)%(.+?)@(.+)}).to_a
+			if x.nil? then
+				# nothing in IRCNAME, maybe it's in IRCUSER?
+				(x, user, server, confhost) = args[0].match(%r{(.+?)%(.+?)@(.+)}).to_a
+			end
 
 			@jid = "#{user}@#{server}"
 			if confhost[-1].chr == '.' then
