@@ -4,7 +4,7 @@ require 'config'
 
 =begin
 
-IRC server implemented as an EventMachine eventer
+IRC server
 
 =end
 
