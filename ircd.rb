@@ -86,9 +86,6 @@ puts "afterwards #{muc.class}"
     def c_join(chan)
         if @muc[chan].nil? then
 		    @muc[chan], junk = Muc.new(chan, self)
-#cb = proc { return Muc.new(chan, self) }
-#	    	oj = proc {|muc| @muc[chan] = muc; self.on_join(muc) }
-#		    EventMachine::defer(cb, oj)
         else
             on_join(muc)
         end

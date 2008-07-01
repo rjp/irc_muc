@@ -23,8 +23,6 @@ class Muc
 		@cl.connect
 		@cl.auth(@@config[:pass])
 	    @m = Jabber::MUC::SimpleMUCClient.new(@cl)
-#		@m.on_join { jmutex.unlock() }
-# @m.on_private_message { ircd.receive_line() } # hmm, no, ignore this, make real methods
         @m.on_message { |time,nick,text|
             handle_message(time, nick, text)
         }
