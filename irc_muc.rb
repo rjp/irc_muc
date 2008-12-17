@@ -1,6 +1,15 @@
 require 'socket'
 require 'ircd'
 
+if ARGV[0].nil? then
+    puts <<ERROR
+> ruby irc_muc.rb ircport
+
+ircport is the port your IRC client will connect to.
+ERROR
+    exit(1)
+end
+
 server = TCPServer.new('localhost', ARGV[0])
 
 ircd = Ircd.new()

@@ -3,7 +3,7 @@
 A simple single user IRC to Jabber MUC gateway.
 
 {{{
-ruby test-em.rb ircport
+ruby irc_muc.rb ircport
 }}}
 
 == Configuration ==
