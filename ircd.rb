@@ -11,6 +11,7 @@ IRC server
 class Ircd
     attr_accessor :muc, :nick, :socket
 	attr_accessor :jid, :user, :pass, :confhost
+	attr_accessor :rooms
 
     def send_data(data)
         @socket.write data
@@ -82,19 +83,22 @@ puts "afterwards #{muc.class}"
     end
 
 	def c_topic(chan, topic)
-		@muc[chan].set_subject(topic) # has to be a method
+		self.set_subject(topic)
+#		@muc[chan].set_subject(topic) # has to be a method
     end
 
 	# spawn a muc connecting us to a particular room
     def c_join(chan)
-        if @muc[chan].nil? then
-		    @muc[chan], junk = Muc.new(chan, self, @jid, @pass, @confhost)
-        else
-            on_join(muc)
-        end
+		self.join(chan)
+#        if @muc[chan].nil? then
+#		    @muc[chan], junk = Muc.new(chan, self, @jid, @pass, @confhost)
+#        else
+#            on_join(muc)
+#        end
     end
 
 	def on_join(muc)
+		self.joined_ok()
         chan = muc.irc_room
 		crlf(":#{@nick} JOIN ##{chan}")
 		wb(332, @nick, "##{chan}", ":#{muc.topic}")
