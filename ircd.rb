@@ -6,6 +6,7 @@ IRC server
 
 =end
 
+# TODO consider making this an interface and the MUC handling a subclass
 
 class Ircd
     attr_accessor :muc, :nick, :socket
