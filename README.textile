@@ -11,7 +11,7 @@ h2. Configuration
 
 h3. Example irssi configuration
 
-<code><pre>
+<pre><code>
 {
     address = "localhost";
     chatnet = "ircmuc";
@@ -20,7 +20,7 @@ h3. Example irssi configuration
     user = "harry.partch%jabber.org@conference.jabber.org";
     password = "quadrangularis";
 }
-</pre></code>
+</code></pre>
 
 h2. Usage
 
