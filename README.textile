@@ -2,14 +2,25 @@ h1. irc_muc
 
 A simple single user IRC to Jabber MUC gateway.
 
-<pre><code>
-    ruby irc_muc.rb ircport
-</code></pre>
+<pre><code>ruby irc_muc.rb ircport</code></pre>
 
 h2. Configuration
 
 | IRCUSER | user%server@conference.host |
 | IRCPASS | the password for user@server |
+
+h3. Example irssi configuration
+
+<code><pre>
+{
+    address = "localhost";
+    chatnet = "ircmuc";
+    port = "6990";
+    autoconnect = "yes";
+    user = "harry.partch%jabber.org@conference.jabber.org";
+    password = "quadrangularis";
+}
+</pre></code>
 
 h2. Usage
 
