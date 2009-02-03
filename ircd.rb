@@ -1,5 +1,7 @@
 require 'muc'
 
+# TODO try porting irc_muc to ruby-ircd as a Service Bot
+
 =begin
 
 IRC server
