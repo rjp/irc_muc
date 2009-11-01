@@ -1,0 +1,37 @@
+h1. irc_muc
+
+A simple single user IRC to Jabber MUC gateway.
+
+<pre><code>ruby irc_muc.rb ircport</code></pre>
+
+h2. Configuration
+
+| IRCUSER | user%server@conference.host |
+| IRCPASS | the password for user@server |
+
+h3. Example irssi configuration
+
+<pre><code>
+{
+    address = "localhost";
+    chatnet = "ircmuc";
+    port = "6990";
+    autoconnect = "yes";
+    user = "harry.partch%jabber.org@conference.jabber.org";
+    password = "quadrangularis";
+}
+</code></pre>
+
+h2. Usage
+
+Connect to ircport with irc client.
+
+h2. Supported IRC actions
+
+|_. Action |_. Supported? |
+| joining channels | yes |
+| changing nick | no |
+| changing topic | yes |
+| messaging a channel | yes |
+| messaging a nick | yes, if nick is unique |
+| leaving a channel | no |
