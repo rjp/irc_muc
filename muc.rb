@@ -19,6 +19,13 @@ class Muc
     	@@config = { :jid => jid, :conf => confhost, :pass => pass }
 
 		@cl = Jabber::Client.new(Jabber::JID.new(@@config[:jid]))
+
+        # start by trapping exceptions and logging them
+        @cl.on_exception { |e,s,w|
+            puts "exception #{e} / #{w}"
+            exit
+        }
+
 		@cl.connect
 		@cl.auth(@@config[:pass])
 
